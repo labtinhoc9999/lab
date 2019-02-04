@@ -1,0 +1,138 @@
+## cau hinh ip tinh
+#nano /etc/sysconfig/network-scripts/ifcfg-eth0 
+DEVICE=ens18
+NAME=ens18
+HWADDR=00:08:A2:0A:BA:B8
+UUID=41171a6f-bce1-44de-8a6e-cf5e782f8bd6
+ONBOOT=yes
+TYPE=Ethernet
+BOOTPROTO=static
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+IPADDR=192.168.99.101
+PREFIX=24
+GATEWAY=192.168.99.1
+DNS1=8.8.8.8
+DNS2=8.8.4.4
+DEFROUTE=yes
+
+#systemctl restart network
+#sudo yum -y update
+
+###cai php 7.3
+#sudo yum -y install http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+#sudo yum -y install epel-release yum-utils
+#sudo yum-config-manager --enable remi-php73
+#sudo yum -y install httpd php php-ldap php-fileinfo php-cli php-fpm php-mysqlnd php-zip php-devel 
+#sudo yum -y install php-gd php-mcrypt php-mbstring php-curl php-xml php-pear php-bcmath php-json
+#sudo yum -y install php-mysql php-imagick php-common php-opcache
+#yum search php | more
+
+## chay apace
+# systemctl start httpd
+# systemctl enable httpd
+
+nano /etc/httpd/conf.d/tailieu.gila.bca.conf
+
+<VirtualHost *:80>
+  DocumentRoot /var/www/html/nextcloud/
+  ServerName  tailieu.gila.bca
+
+	<Directory "/var/www/html/nextcloud/">
+	  Require all granted
+	  AllowOverride All
+	  Options FollowSymLinks MultiViews
+	</Directory>
+</VirtualHost>
+
+## cai mariadb
+##Note that if you change an existing repository configuration, then you need to execute the following:
+##yum clean metadata
+#nano /etc/yum.repos.d/MariaDB.repo
+
+###copy paste
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.3/centos7-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+
+#yum repolist
+#yum install MariaDB-server MariaDB-client -y
+# systemctl start mysql.service
+# systemctl enable mysql.service
+
+#mysql_secure_installation
+
+#ps aux | grep -v "grep" | grep "mysqld"
+
+mysql -u root -p
+CREATE DATABASE nextcloud;
+CREATE USER 'nextcloud'@'localhost' IDENTIFIED BY 'quantri@603';
+GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'localhost';
+FLUSH PRIVILEGES;
+
+
+# cd /var/www/html
+# curl -o nextcloud-15-latest.tar.bz2 https://download.nextcloud.com/server/releases/latest-15.tar.bz2
+# yum install bzip2 -y
+# tar -xvjf nextcloud-15-latest.tar.bz2
+# mkdir nextcloud/data
+# chown -R apache:apache nextcloud
+# rm nextcloud-15-latest.tar.bz2
+
+
+# firewall-cmd --add-service http --permanent
+# firewall-cmd --add-service https --permanent
+# firewall-cmd --reload
+
+
+yum install php-opcache -y
+
+nano /etc/php.d/10-opcache.ini
+; Enable Zend OPcache extension module
+zend_extension=opcache.so
+opcache.enable=1
+opcache.enable_cli=1
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=10000
+opcache.memory_consumption=128
+opcache.save_comments=1
+opcache.revalidate_freq=1
+
+systemctl restart httpd
+
+yum install redis php-pecl-redis
+
+### tat selinux
+#nano /etc/selinux/config
+#reboot
+
+systemctl start redis
+systemctl enable redis
+systemctl restart httpd
+
+
+cp /var/www/html/nextcloud/config/config.php /var/www/html/nextcloud/config/config.php.bk
+nano /var/www/html/nextcloud/config/config.php
+
+'has_internet_connection' => false,
+'memcache.locking' => '\OC\Memcache\Redis',
+'memcache.distributed' => '\OC\Memcache\Redis',
+'memcache.local' => '\OC\Memcache\Redis',
+'redis' => [
+      'host' => 'localhost',
+      'port' => 6379,
+      'timeout' => 3,
+    ],
+	
+	
+##if using ssl
+mkdir -p /etc/apache/cert/
+openssl req -new -x509 -days 365 -nodes -out /etc/apache/cert/nextcloud.crt -keyout /etc/apache/cert/nextcloud.key
+chmod 700 /etc/apache/cert
+chmod 600 /etc/apache/cert/*
+
+### php upload 2G
+upload_max_filesize = 2048M
+post_max_size = 2058M
