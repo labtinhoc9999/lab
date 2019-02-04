@@ -1,0 +1,163 @@
+## cau hinh ip tinh
+#nano /etc/sysconfig/network-scripts/ifcfg-eth0 
+DEVICE=ens18
+NAME=ens18
+HWADDR=00:08:A2:0A:BA:B8
+UUID=41171a6f-bce1-44de-8a6e-cf5e782f8bd6
+ONBOOT=yes
+TYPE=Ethernet
+BOOTPROTO=static
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+IPADDR=192.168.99.101
+PREFIX=24
+GATEWAY=192.168.99.1
+DNS1=8.8.8.8
+DNS2=8.8.4.4
+DEFROUTE=yes
+
+#systemctl restart network
+#sudo yum -y update
+
+### tat selinux
+# sestatus
+SELinux status: disabled
+vi /etc/selinux/config
+# This file controls the state of SELinux on the system.
+# SELINUX= can take one of these three values:
+# enforcing - SELinux security policy is enforced.
+# permissive - SELinux prints warnings instead of enforcing.
+# disabled - SELinux is fully disabled.
+SELINUX=disabled
+# SELINUXTYPE= type of policy in use. Possible values are:
+# targeted - Only targeted network daemons are protected.
+# strict - Full SELinux protection.
+SELINUXTYPE=targeted
+
+###cai php 7.3
+#sudo yum -y install http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+#sudo yum -y install epel-release yum-utils
+#sudo yum-config-manager --enable remi-php73
+#sudo yum -y install httpd php php-ldap php-fileinfo php-cli php-fpm php-mysqlnd php-zip php-devel 
+#sudo yum -y install php-gd php-mcrypt php-mbstring php-curl php-xml php-pear php-bcmath php-json
+#sudo yum -y install php-mysql php-imagick php-common php-opcache
+#yum search php | more
+
+## chay apache
+#systemctl enable httpd && systemctl start httpd
+
+yum install mod_ssl
+mkdir -p /etc/httpd/ssl/private
+chmod 700 /etc/httpd/ssl/private
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/httpd/ssl/private/apache-selfsigned.key -out /etc/httpd/ssl/apache-selfsigned.crt
+
+/etc/httpd/conf.d/ssl.conf
+
+DocumentRoot "/usr/share/zabbix"
+ServerName example.com:443
+SSLCertificateFile /etc/httpd/ssl/apache-selfsigned.crt
+SSLCertificateKeyFile /etc/httpd/ssl/private/apache-selfsigned.key
+
+systemctl restart httpd.service
+
+/etc/httpd/conf/httpd.conf
+
+<VirtualHost *:*>
+    ServerName example.com
+    Redirect permanent / http://example.com
+</VirtualHost>
+
+systemctl restart httpd.service
+/etc/httpd/conf/httpd.conf
+
+<VirtualHost *:443>
+   Header set Strict-Transport-Security "max-age=31536000"
+</VirtualHost>
+
+systemctl restart httpd.service
+
+## cai mariadb
+##Note that if you change an existing repository configuration, then you need to execute the following:
+##yum clean metadata
+#nano /etc/yum.repos.d/MariaDB.repo
+
+###copy paste
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.3/centos7-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+
+#yum repolist
+#yum install MariaDB-server MariaDB-client -y
+#systemctl enable mariadb && systemctl start mariadb 
+#mysql_secure_installation
+
+#ps aux | grep -v "grep" | grep "mysqld"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# firewall-cmd --add-service http --permanent
+# firewall-cmd --add-service https --permanent
+# firewall-cmd --reload
+
+
+php_value max_execution_time 300
+php_value memory_limit 128M
+php_value post_max_size 16M
+php_value upload_max_filesize 2M
+php_value max_input_time 300
+php_value max_input_vars 10000
+php_value always_populate_raw_post_data -1
+# php_value date.timezone Asia/Ho_Chi_Minh
+
+yum install php-opcache -y
+
+nano /etc/php.d/10-opcache.ini
+; Enable Zend OPcache extension module
+zend_extension=opcache.so
+opcache.enable=1
+opcache.enable_cli=1
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=10000
+opcache.memory_consumption=128
+opcache.save_comments=1
+opcache.revalidate_freq=1
+
+systemctl restart httpd
+
+yum install redis php-pecl-redis
+
+
+systemctl start redis
+systemctl enable redis
+systemctl restart httpd
+
+##if using ssl
+mkdir -p /etc/apache/cert/
+openssl req -new -x509 -days 365 -nodes -out /etc/apache/cert/nextcloud.crt -keyout /etc/apache/cert/nextcloud.key
+chmod 700 /etc/apache/cert
+chmod 600 /etc/apache/cert/*
+
+
+### tat selinux
+#nano /etc/selinux/config
+#reboot
+
+### php upload 2G
+upload_max_filesize = 2048M
+post_max_size = 2058M
